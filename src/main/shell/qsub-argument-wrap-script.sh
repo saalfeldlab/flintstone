@@ -49,6 +49,6 @@ N_CORES_PER_MACHINE=16
 export PARALLELISM=$(($N_NODES * $N_CORES_PER_MACHINE * 3))
 export MASTER="spark://$HOST:7077"
 
-"$SCRIPT_FILE" $@
+time "$SCRIPT_FILE" $@
 
     
