@@ -1,12 +1,21 @@
-# this example can also be run like:
-# ../src/main/shell/inflame.sh <N_NODES> ../target/flintstone-0.0.1-SNAPSHOT.jar org.janelia.flintstone.Example <N>
+#!/bin/bash
+
+# Run this script from an interactive (QLOGIN) session
+# [N=<N>] [N_NODES=<N_NODES>] ./example.sh
 
 N=${N:-20}
 ARGV=$N
 N_NODES=${N_NODES:-5}
 
-IGNITE=../src/main/shell/ignite.sh
-SCRIPT=get-sum-of-integers.sh
+OWN_DIR="$( readlink -f "$( dirname "${BASH_SOURCE[0]}" )" )"
+FLINTSTONE="${OWN_DIR}/../flintstone.sh"
+JAR=`readlink -f "$OWN_DIR/target/flintstone-0.0.1-SNAPSHOT.jar"`
+CLASS=org.janelia.flintstone.Example
 
-$IGNITE $N_NODES $SCRIPT $ARGV
+if [ ! -e "$JAR" ]; then
+    echo "Run mvn package first!" >&2
+    exit 1
+fi
+
+TERMINATE=1 $FLINTSTONE $N_NODES $JAR $CLASS $ARGV
 
