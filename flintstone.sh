@@ -3,7 +3,7 @@
 SPARK_DEPLOY_CMD="/usr/local/python-2.7.6/bin/python /usr/local/spark-versions/bin/spark-deploy.py"
 
 USAGE="usage:
-[TERMINATE=1] [RUNTIME=<hh:mm:ss>] $0 <MASTER_JOB_ID|N_NODES> <JAR> <CLASS> <ARGV>
+[TERMINATE=1] [RUNTIME=<hh:mm:ss>] [TMPDIR=<tmp>] $0 <MASTER_JOB_ID|N_NODES> <JAR> <CLASS> <ARGV>
 
 If job with \${MASTER_JOB_ID} does not exist, value will be interpreted as number of 
 nodes (N_NODES), and a new Spark master will be started with N_NODES workers using
@@ -77,7 +77,8 @@ done
 HOST=`echo $MASTER_GREP | sed -r -e 's/.* hadoop[A-Za-z0-9.]+@([A-Za-z0-9.]+) .*/\\1/'`
 N_CORES_PER_MACHINE=16
 
-TMP_FILE=`mktemp`
+# --tmpdir uses $TMPDIR if set else /tmp
+TMP_FILE=`mktemp --tmpdir`
 # need this first line in tmp file
 # http://llama.mshri.on.ca/faq-llama.html#tty
 # or run qsub -S /bin/bash 
