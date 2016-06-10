@@ -108,10 +108,13 @@ echo -e "JOB_NAME         $CLASS"
 
 mkdir -p ~/.sparklogs
 
+# --conf spark.eventLog.enabled=true does not work:
+# 16/06/10 10:59:51 ERROR SparkContext: Error initializing SparkContext.
+# java.io.FileNotFoundException: File file:/tmp/spark-events does not exist.
+
 echo TIME_CMD="\"time \$SPARK_HOME/bin/spark-submit\"" >> $TMP_FILE
 echo \$TIME_CMD --verbose \
           --conf spark.default.parallelism=$PARALLELISM \
-          --conf spark.eventLog.enabled=true \
           --class $CLASS \
           $JAR \
           $ARGV >> $TMP_FILE
