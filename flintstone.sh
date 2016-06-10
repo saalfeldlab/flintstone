@@ -111,6 +111,7 @@ mkdir -p ~/.sparklogs
 echo TIME_CMD="\"time \$SPARK_HOME/bin/spark-submit\"" >> $TMP_FILE
 echo \$TIME_CMD --verbose \
           --conf spark.default.parallelism=$PARALLELISM \
+          --conf spark.eventLog.enabled=true \
           --class $CLASS \
           $JAR \
           $ARGV >> $TMP_FILE
