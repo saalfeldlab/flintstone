@@ -3,7 +3,7 @@ Ingition for your spark jobs
 
 Starting your Spark jobs on the Janelia cluster is really simple. Simply run
 ```bash
-[TERMINATE=1] [RUNTIME=<hh:mm:ss>] [TMPDIR=<tmp>] <flintstone-root>/.sh <MASTER_JOB_ID|N_NODES> <JAR> <CLASS> <ARGV>
+[TERMINATE=1] [RUNTIME=<hh:mm:ss>] [TMPDIR=<tmp>] <flintstone-root>/flintstone.sh <MASTER_JOB_ID|N_NODES> <JAR> <CLASS> <ARGV>
 ```
 from a QLOGIN environment, where
  - `<MASTER_JOB_ID|N_NODES>` - job id of master (if already started) or number of worker nodes (otherwise)
