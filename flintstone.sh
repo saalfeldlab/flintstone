@@ -3,7 +3,7 @@
 SPARK_DEPLOY_CMD="/usr/local/python-2.7.6/bin/python /usr/local/spark-versions/bin/spark-deploy.py"
 
 USAGE="usage:
-[TERMINATE=1] [RUNTIME=<hh:mm:ss>] [TMPDIR=<tmp>] $0 <MASTER_JOB_ID|N_NODES> <JAR> <CLASS> <ARGV>
+[TERMINATE=1] [RUNTIME=<hh:mm:ss>] [TMPDIR=<tmp>] [N_EXECUTORS_PER_NODE=3] $0 <MASTER_JOB_ID|N_NODES> <JAR> <CLASS> <ARGV>
 
 If job with \${MASTER_JOB_ID} does not exist, value will be interpreted as number of 
 nodes (N_NODES), and a new Spark master will be started with N_NODES workers using
@@ -15,6 +15,7 @@ value."
 
 FAILURE_CODE=1
 RUNTIME="${RUNTIME:-default}"
+N_EXECUTORS_PER_NODE="${N_EXECUTORS_PER_NODE:-3}"
 
 if [ "$#" -lt "3" ]; then
     echo -e "Not enough arguments!" 1>&2
@@ -75,7 +76,10 @@ while [ -n "$(echo $MASTER_GREP | grep qw)" ] ; do
     # MASTER_GREP=`qstat | grep -E  "${MASTER_JOB_ID} [0-9.]+ master"`
 done
 HOST=`echo $MASTER_GREP | sed -r -e 's/.* hadoop[A-Za-z0-9.]+@([A-Za-z0-9.]+) .*/\\1/'`
-N_CORES_PER_MACHINE=16
+N_CORES_PER_MACHINE=15
+MEMORY_PER_MACHINE=90
+export N_CORES_PER_EXECUTOR=$(($N_CORES_PER_MACHINE / $N_EXECUTORS_PER_NODE))
+export MEMORY_PER_EXECUTOR=$(($MEMORY_PER_MACHINE / $N_EXECUTORS_PER_NODE))
 
 # --tmpdir uses $TMPDIR if set else /tmp
 TMP_FILE=`mktemp --tmpdir`
@@ -88,7 +92,8 @@ echo >> $TMP_FILE
 
 export SPARK_HOME="${SPARK_HOME:-/usr/local/spark-current}"
 export PATH="$SPARK_HOME:$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH"
-export PARALLELISM="$(($N_NODES * $N_CORES_PER_MACHINE * 3))"
+export N_EXECUTORS=$(($N_NODES * $N_EXECUTORS_PER_NODE))
+export PARALLELISM="$(($N_EXECUTORS * 3))"
 export MASTER="spark://${HOST}:7077"
 
 echo "export SPARK_HOME=${SPARK_HOME}" >> $TMP_FILE
@@ -115,6 +120,8 @@ mkdir -p ~/.sparklogs
 echo TIME_CMD="\"time \$SPARK_HOME/bin/spark-submit\"" >> $TMP_FILE
 echo \$TIME_CMD --verbose \
           --conf spark.default.parallelism=$PARALLELISM \
+          --conf spark.executor.cores=$N_CORES_PER_EXECUTOR \
+          --conf spark.executor.memory=${MEMORY_PER_EXECUTOR}g \
           --class $CLASS \
           $JAR \
           $ARGV >> $TMP_FILE
