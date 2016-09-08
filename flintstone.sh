@@ -93,7 +93,7 @@ export MEMORY_PER_EXECUTOR=$(($MEMORY_PER_NODE / $N_EXECUTORS_PER_NODE))
 export SPARK_HOME="${SPARK_HOME:-/usr/local/spark-current}"
 export PATH="$SPARK_HOME:$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH"
 export N_EXECUTORS=$(($N_NODES * $N_EXECUTORS_PER_NODE))
-export PARALLELISM="$(($N_EXECUTORS * 3))"
+export PARALLELISM="$(($N_EXECUTORS * $N_CORES_PER_EXECUTOR * 3))"
 export MASTER="spark://${HOST}:7077"
 
 echo "export SPARK_HOME=${SPARK_HOME}" >> $TMP_FILE
