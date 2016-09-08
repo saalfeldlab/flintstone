@@ -56,12 +56,24 @@ if [ "$EXIT_CODE" -ne "0" ]; then
     SUBMISSION=`qsub -jc sparkflex.default`
     N_NODES=${MASTER_JOB_ID}
     MASTER_JOB_ID=`echo $SUBMISSION | sed -r -e 's/Your job ([0-9]+) .*/\\1/'`
+    while [ -z "`qstat | grep ${MASTER_JOB_ID}`" ]; do
+        echo "waiting for the master job..."
+        sleep 1s
+    done
     MASTER_GREP=`qstat | grep -E  "^ +${MASTER_JOB_ID} [0-9.]+ master"`
     # MASTER_GREP=`qstat | grep -E  "${MASTER_JOB_ID} [0-9.]+ master"`
     ${SPARK_DEPLOY_CMD} -j $MASTER_JOB_ID -w ${N_NODES} -t ${RUNTIME}
 fi
 
+
 N_NODES=`qstat | grep "W${MASTER_JOB_ID}" | wc -l`
+TRIES_LEFT=5
+while [ "$N_NODES" -lt "1" ] && [ "$TRIES_LEFT" -gt "0" ]; do
+    echo -e "waiting for the workers... "
+    ((--TRIES_LEFT))
+    sleep 1s
+    N_NODES=`qstat | grep "W${MASTER_JOB_ID}" | wc -l`
+done
 
 if [ "$N_NODES" -lt "1" ]; then
     echo -e "No workers present for master ${MASTER_JOB_ID}!"
@@ -70,6 +82,7 @@ if [ "$N_NODES" -lt "1" ]; then
 else
     ((++FAILURE_CODE))
 fi
+
 
 while [ -n "$(echo $MASTER_GREP | grep qw)" ] ; do
     echo "Master node not ready yet (qw) - try again in five seconds..."
