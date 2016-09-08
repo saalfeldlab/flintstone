@@ -3,7 +3,7 @@
 SPARK_DEPLOY_CMD="/usr/local/python-2.7.6/bin/python /usr/local/spark-versions/bin/spark-deploy.py"
 
 USAGE="usage:
-[TERMINATE=1] [RUNTIME=<hh:mm:ss>] [TMPDIR=<tmp>] [N_EXECUTORS_PER_NODE=3] $0 <MASTER_JOB_ID|N_NODES> <JAR> <CLASS> <ARGV>
+[TERMINATE=1] [RUNTIME=<hh:mm:ss>] [TMPDIR=<tmp>] [N_EXECUTORS_PER_NODE=3] [MEMORY_PER_NODE=75] $0 <MASTER_JOB_ID|N_NODES> <JAR> <CLASS> <ARGV>
 
 If job with \${MASTER_JOB_ID} does not exist, value will be interpreted as number of 
 nodes (N_NODES), and a new Spark master will be started with N_NODES workers using
@@ -15,7 +15,10 @@ value."
 
 FAILURE_CODE=1
 RUNTIME="${RUNTIME:-default}"
+
+N_CORES_PER_NODE=15
 N_EXECUTORS_PER_NODE="${N_EXECUTORS_PER_NODE:-3}"
+MEMORY_PER_NODE="${MEMORY_PER_NODE:-75}"
 
 if [ "$#" -lt "3" ]; then
     echo -e "Not enough arguments!" 1>&2
@@ -58,7 +61,6 @@ if [ "$EXIT_CODE" -ne "0" ]; then
     ${SPARK_DEPLOY_CMD} -j $MASTER_JOB_ID -w ${N_NODES} -t ${RUNTIME}
 fi
 
-
 N_NODES=`qstat | grep "W${MASTER_JOB_ID}" | wc -l`
 
 if [ "$N_NODES" -lt "1" ]; then
@@ -76,10 +78,6 @@ while [ -n "$(echo $MASTER_GREP | grep qw)" ] ; do
     # MASTER_GREP=`qstat | grep -E  "${MASTER_JOB_ID} [0-9.]+ master"`
 done
 HOST=`echo $MASTER_GREP | sed -r -e 's/.* hadoop[A-Za-z0-9.]+@([A-Za-z0-9.]+) .*/\\1/'`
-N_CORES_PER_MACHINE=15
-MEMORY_PER_MACHINE=90
-export N_CORES_PER_EXECUTOR=$(($N_CORES_PER_MACHINE / $N_EXECUTORS_PER_NODE))
-export MEMORY_PER_EXECUTOR=$(($MEMORY_PER_MACHINE / $N_EXECUTORS_PER_NODE))
 
 # --tmpdir uses $TMPDIR if set else /tmp
 TMP_FILE=`mktemp --tmpdir`
@@ -90,6 +88,8 @@ echo "#$ -S /bin/bash" >> $TMP_FILE
 chmod +x $TMP_FILE
 echo >> $TMP_FILE
 
+export N_CORES_PER_EXECUTOR=$(($N_CORES_PER_NODE / $N_EXECUTORS_PER_NODE))
+export MEMORY_PER_EXECUTOR=$(($MEMORY_PER_NODE / $N_EXECUTORS_PER_NODE))
 export SPARK_HOME="${SPARK_HOME:-/usr/local/spark-current}"
 export PATH="$SPARK_HOME:$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH"
 export N_EXECUTORS=$(($N_NODES * $N_EXECUTORS_PER_NODE))
@@ -100,6 +100,7 @@ echo "export SPARK_HOME=${SPARK_HOME}" >> $TMP_FILE
 echo "export PATH=$PATH" >> $TMP_FILE
 echo "export PARALLELISM=$PARALLELISM" >> $TMP_FILE
 echo "export MASTER=$MASTER" >> $TMP_FILE
+echo "export N_EXECUTORS=$N_EXECUTORS" >> $TMP_FILE
 
 echo -e
 echo -e Environment:
