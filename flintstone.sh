@@ -53,7 +53,13 @@ if [ "$EXIT_CODE" -ne "0" ]; then
     else
         ((++FAILURE_CODE))
     fi
-    SUBMISSION=`qsub -jc sparkflex.default`
+
+    if [ "$RUNTIME" != "default" ]; then
+        echo -e "Runtime set to ${RUNTIME}"
+        RUNTIME_FLAG="-l hadoop_exclusive=1,h_rt=$RUNTIME"
+    fi
+
+    SUBMISSION=`qsub -jc sparkflex.default $RUNTIME_FLAG`
     N_NODES=${MASTER_JOB_ID}
     MASTER_JOB_ID=`echo $SUBMISSION | sed -r -e 's/Your job ([0-9]+) .*/\\1/'`
     while [ -z "`qstat | grep ${MASTER_JOB_ID}`" ]; do
@@ -146,7 +152,12 @@ fi
 
 
 
-JOB_MESSAGE=`qsub -pe batch 16 -N "$CLASS" -j y -o ~/.sparklogs/ $TMP_FILE`
+if [ "$RUNTIME" != "default" ]; then
+    echo -e "Runtime set to ${RUNTIME}"
+    RUNTIME_FLAG="-l h_rt=$RUNTIME"
+fi
+
+JOB_MESSAGE=`qsub -pe batch 16 -N "$CLASS" $RUNTIME_FLAG -j y -o ~/.sparklogs/ $TMP_FILE`
 JOB_ID=`echo ${JOB_MESSAGE} | sed -r 's/Your job ([0-9]+) .*/\1/'`
 echo -e "JOB_ID           $JOB_ID"
 
