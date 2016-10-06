@@ -3,7 +3,7 @@
 SPARK_DEPLOY_CMD="/misc/local/python-2.7.11/bin/python /misc/local/spark-versions/bin/spark-deploy.py"
 
 USAGE="usage:
-[TERMINATE=1] [RUNTIME=<hh:mm:ss>] [TMPDIR=<tmp>] [N_EXECUTORS_PER_NODE=3] [MEMORY_PER_NODE=75] $0 <MASTER_JOB_ID|N_NODES> <JAR> <CLASS> <ARGV>
+[TERMINATE=1] [RUNTIME=<hh:mm:ss>] [TMPDIR=<tmp>] [N_EXECUTORS_PER_NODE=3] [MEMORY_PER_NODE=75] [N_DRIVER_THREADS=16] $0 <MASTER_JOB_ID|N_NODES> <JAR> <CLASS> <ARGV>
 
 If job with \${MASTER_JOB_ID} does not exist, value will be interpreted as number of 
 nodes (N_NODES), and a new Spark master will be started with N_NODES workers using
@@ -19,6 +19,8 @@ RUNTIME="${RUNTIME:-default}"
 N_CORES_PER_NODE=15
 N_EXECUTORS_PER_NODE="${N_EXECUTORS_PER_NODE:-3}"
 MEMORY_PER_NODE="${MEMORY_PER_NODE:-75}"
+
+N_DRIVER_THREADS="${N_DRIVER_THREADS:-16}"
 
 if [ "$#" -lt "3" ]; then
     echo -e "Not enough arguments!" 1>&2
@@ -55,7 +57,6 @@ if [ "$EXIT_CODE" -ne "0" ]; then
     fi
 
     if [ "$RUNTIME" != "default" ]; then
-        echo -e "Runtime set to ${RUNTIME}"
         RUNTIME_FLAG="-l hadoop_exclusive=1,h_rt=$RUNTIME"
     fi
 
@@ -152,12 +153,17 @@ fi
 
 
 
+echo -e "RUNTIME          $RUNTIME"
 if [ "$RUNTIME" != "default" ]; then
-    echo -e "Runtime set to ${RUNTIME}"
     RUNTIME_FLAG="-l h_rt=$RUNTIME"
 fi
 
-JOB_MESSAGE=`qsub -pe batch 16 -N "$CLASS" $RUNTIME_FLAG -j y -o ~/.sparklogs/ $TMP_FILE`
+echo -e "N_DRIVER_THREADS $N_DRIVER_THREADS"
+if [ "$N_DRIVER_THREADS" -ne "1" ]; then
+    BATCH_FLAG="-pe batch $N_DRIVER_THREADS"
+fi
+
+JOB_MESSAGE=`qsub $BATCH_FLAG -N "$CLASS" $RUNTIME_FLAG -j y -o ~/.sparklogs/ $TMP_FILE`
 JOB_ID=`echo ${JOB_MESSAGE} | sed -r 's/Your job ([0-9]+) .*/\1/'`
 echo -e "JOB_ID           $JOB_ID"
 
