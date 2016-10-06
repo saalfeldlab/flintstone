@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SPARK_DEPLOY_CMD="/usr/local/python-2.7.6/bin/python /usr/local/spark-versions/bin/spark-deploy.py"
+SPARK_DEPLOY_CMD="/misc/local/python-2.7.11/bin/python /misc/local/spark-versions/bin/spark-deploy.py"
 
 USAGE="usage:
 [TERMINATE=1] [RUNTIME=<hh:mm:ss>] [TMPDIR=<tmp>] [N_EXECUTORS_PER_NODE=3] [MEMORY_PER_NODE=75] $0 <MASTER_JOB_ID|N_NODES> <JAR> <CLASS> <ARGV>
