@@ -15,6 +15,7 @@ value."
 
 FAILURE_CODE=1
 RUNTIME="${RUNTIME:-default}"
+SPARK_VERSION="${SPARK_VERSION:-default}"
 
 N_CORES_PER_NODE="${N_CORES_PER_NODE:-15}"
 N_EXECUTORS_PER_NODE="${N_EXECUTORS_PER_NODE:-3}"
@@ -39,6 +40,18 @@ ARGV="$@"
 MASTER_GREP=`qstat | grep -E  "^ +${MASTER_JOB_ID} [0-9.]+ master"`
 EXIT_CODE=$?
 
+if [ "$SPARK_VERSION" != "default" ]; then
+    if [ "$SPARK_VERSION" != "2" ] && [ "$SPARK_VERSION" != "rc" ]; then
+        echo -e "Incorrect spark version specified. Possible values are: default, 2, rc. Falling back to default."
+        SPARK_VERSION_MASTER_FLAG="default"
+        SPARK_HOME_SUBFOLDER="spark-current"
+    else
+        SPARK_VERSION_MASTER_FLAG="master-$SPARK_VERSION"
+        SPARK_HOME_SUBFOLDER="spark-$SPARK_VERSION"
+        SPARK_VERSION_FLAG="-v $SPARK_VERSION"
+    fi
+fi
+
 if [ "$EXIT_CODE" -ne "0" ]; then
     echo -e "Master not present. Starting master with ${MASTER_JOB_ID} node(s)."
     echo -e "Not all workers are guaranteed to be present at the start of the job."
@@ -47,7 +60,8 @@ if [ "$EXIT_CODE" -ne "0" ]; then
     echo -e "are running."
     echo -e
     echo -e "Start Spark server:"
-    echo -e "${SPARK_DEPLOY_CMD} -w \${N_NODES}"
+    echo -e "${SPARK_DEPLOY_CMD} -w \${N_NODES} ${SPARK_VERSION_FLAG}"
+
     if [ "${MASTER_JOB_ID}" -gt "120" ]; then
         echo -e "It doesn't make sense to use ${MASTER_JOB_ID} nodes!"
         echo -e "${USAGE}"
@@ -60,7 +74,7 @@ if [ "$EXIT_CODE" -ne "0" ]; then
         RUNTIME_FLAG="-l hadoop_exclusive=1,h_rt=$RUNTIME"
     fi
 
-    SUBMISSION=`qsub -jc sparkflex.default $RUNTIME_FLAG`
+    SUBMISSION=`qsub -jc sparkflex.$SPARK_VERSION_MASTER_FLAG $RUNTIME_FLAG`
     N_NODES=${MASTER_JOB_ID}
     MASTER_JOB_ID=`echo $SUBMISSION | sed -r -e 's/Your job ([0-9]+) .*/\\1/'`
     while [ -z "`qstat | grep ${MASTER_JOB_ID}`" ]; do
@@ -68,8 +82,7 @@ if [ "$EXIT_CODE" -ne "0" ]; then
         sleep 1s
     done
     MASTER_GREP=`qstat | grep -E  "^ +${MASTER_JOB_ID} [0-9.]+ master"`
-    # MASTER_GREP=`qstat | grep -E  "${MASTER_JOB_ID} [0-9.]+ master"`
-    ${SPARK_DEPLOY_CMD} -j $MASTER_JOB_ID -w ${N_NODES} -t ${RUNTIME}
+    ${SPARK_DEPLOY_CMD} -j $MASTER_JOB_ID -w ${N_NODES} -t ${RUNTIME} ${SPARK_VERSION_FLAG}
 fi
 
 
@@ -110,7 +123,7 @@ echo >> $TMP_FILE
 
 export N_CORES_PER_EXECUTOR=$(($N_CORES_PER_NODE / $N_EXECUTORS_PER_NODE))
 export MEMORY_PER_EXECUTOR=$(($MEMORY_PER_NODE / $N_EXECUTORS_PER_NODE))
-export SPARK_HOME="${SPARK_HOME:-/usr/local/spark-current}"
+export SPARK_HOME="${SPARK_HOME:-/usr/local/$SPARK_HOME_SUBFOLDER}"
 export PATH="$SPARK_HOME:$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH"
 export N_EXECUTORS=$(($N_NODES * $N_EXECUTORS_PER_NODE))
 export PARALLELISM="$(($N_EXECUTORS * $N_CORES_PER_EXECUTOR * 3))"
