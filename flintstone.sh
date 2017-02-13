@@ -20,6 +20,7 @@ SPARK_VERSION="${SPARK_VERSION:-default}"
 N_CORES_PER_NODE="${N_CORES_PER_NODE:-15}"
 N_EXECUTORS_PER_NODE="${N_EXECUTORS_PER_NODE:-3}"
 MEMORY_PER_NODE="${MEMORY_PER_NODE:-75}"
+SPARK_OPTIONS="${SPARK_OPTIONS:-}"
 
 N_DRIVER_THREADS="${N_DRIVER_THREADS:-16}"
 
@@ -156,6 +157,7 @@ echo \$TIME_CMD --verbose \
           --conf spark.default.parallelism=$PARALLELISM \
           --conf spark.executor.cores=$N_CORES_PER_EXECUTOR \
           --conf spark.executor.memory=${MEMORY_PER_EXECUTOR}g \
+          "${SPARK_OPTIONS}" \
           --class $CLASS \
           $JAR \
           $ARGV >> $TMP_FILE
