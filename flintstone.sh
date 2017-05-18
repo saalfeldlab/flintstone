@@ -157,6 +157,7 @@ echo \$TIME_CMD --verbose \
           --conf spark.default.parallelism=$PARALLELISM \
           --conf spark.executor.cores=$N_CORES_PER_EXECUTOR \
           --conf spark.executor.memory=${MEMORY_PER_EXECUTOR}g \
+          --conf '"spark.executor.extraJavaOptions=-Djava.awt.headless=true"' \
           "${SPARK_OPTIONS}" \
           --class $CLASS \
           $JAR \
