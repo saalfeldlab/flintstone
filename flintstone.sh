@@ -41,16 +41,17 @@ ARGV="$@"
 MASTER_GREP=`qstat | grep -E  "^ +${MASTER_JOB_ID} [0-9.]+ master"`
 EXIT_CODE=$?
 
-if [ "$SPARK_VERSION" != "default" ]; then
-    if [ "$SPARK_VERSION" != "2" ] && [ "$SPARK_VERSION" != "rc" ]; then
+
+if [ "$SPARK_VERSION" != "2" ] && [ "$SPARK_VERSION" != "rc" ]; then
+    if [ "$SPARK_VERSION" != "default" ]; then
         echo -e "Incorrect spark version specified. Possible values are: default, 2, rc. Falling back to default."
-        SPARK_VERSION_MASTER_FLAG="default"
-        SPARK_HOME_SUBFOLDER="spark-current"
-    else
-        SPARK_VERSION_MASTER_FLAG="master-$SPARK_VERSION"
-        SPARK_HOME_SUBFOLDER="spark-$SPARK_VERSION"
-        SPARK_VERSION_FLAG="-v $SPARK_VERSION"
     fi
+    SPARK_VERSION_MASTER_FLAG="default"
+    SPARK_HOME_SUBFOLDER="spark-current"
+else
+    SPARK_VERSION_MASTER_FLAG="master-$SPARK_VERSION"
+    SPARK_HOME_SUBFOLDER="spark-$SPARK_VERSION"
+    SPARK_VERSION_FLAG="-v $SPARK_VERSION"
 fi
 
 if [ "$EXIT_CODE" -ne "0" ]; then
