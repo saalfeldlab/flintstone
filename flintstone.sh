@@ -1,9 +1,12 @@
 #!/bin/bash
 
-SPARK_DEPLOY_CMD="/misc/local/python-2.7.11/bin/python /misc/local/spark-versions/bin/spark-deploy.py"
+# TODO: Use public version of spark-janelia-lsf. Changes in the modified version are:
+#  1. Runtime argument made a string of form "hh:mm" instead of integer representing minutes
+#  2. Turned off git updates check for now because it might hang silently waiting for the user prompt
+SPARK_DEPLOY_CMD="/groups/saalfeld/home/pisarevi/workspace/spark-janelia/spark-janelia-lsf-modified"
 
 USAGE="usage:
-[TERMINATE=1] [RUNTIME=<hh:mm:ss>] [TMPDIR=<tmp>] [N_EXECUTORS_PER_NODE=3] [MEMORY_PER_NODE=75] [N_DRIVER_THREADS=16] $0 <MASTER_JOB_ID|N_NODES> <JAR> <CLASS> <ARGV>
+[TERMINATE=1] [RUNTIME=<hh:mm>] [TMPDIR=<tmp>] [N_EXECUTORS_PER_NODE=3] [MEMORY_PER_NODE=75] [N_DRIVER_THREADS=16] $0 <MASTER_JOB_ID|N_NODES> <JAR> <CLASS> <ARGV>
 
 If job with \${MASTER_JOB_ID} does not exist, value will be interpreted as number of 
 nodes (N_NODES), and a new Spark master will be started with N_NODES workers using
@@ -14,8 +17,8 @@ If master exists but no workers are present, this script will just exit with a n
 value."
 
 FAILURE_CODE=1
-RUNTIME="${RUNTIME:-default}"
-SPARK_VERSION="${SPARK_VERSION:-default}"
+RUNTIME="${RUNTIME:-}"
+SPARK_VERSION="${SPARK_VERSION:-current}"
 
 N_CORES_PER_NODE="${N_CORES_PER_NODE:-15}"
 N_EXECUTORS_PER_NODE="${N_EXECUTORS_PER_NODE:-3}"
@@ -38,21 +41,19 @@ JAR=`readlink -f $1`; shift
 CLASS=$1;             shift
 
 ARGV="$@"
-MASTER_GREP=`qstat | grep -E  "^ +${MASTER_JOB_ID} [0-9.]+ master"`
+MASTER_GREP=`bjobs -Xr -noheader -J master | grep -E  "^${MASTER_JOB_ID} +"`
 EXIT_CODE=$?
 
 
-if [ "$SPARK_VERSION" != "2" ] && [ "$SPARK_VERSION" != "rc" ]; then
-    if [ "$SPARK_VERSION" != "default" ]; then
-        echo -e "Incorrect spark version specified. Possible values are: default, 2, rc. Falling back to default."
-    fi
-    SPARK_VERSION_MASTER_FLAG="default"
-    SPARK_HOME_SUBFOLDER="spark-current"
+if [ "$SPARK_VERSION" != "current" ] && [ "$SPARK_VERSION" != "2" ] && [ "$SPARK_VERSION" != "rc" ] && [ "$SPARK_VERSION" != "test" ]; then
+    echo -e "Incorrect spark version specified. Possible values are: current, 2, rc, test"
+    exit $FAILURE_CODE
 else
-    SPARK_VERSION_MASTER_FLAG="master-$SPARK_VERSION"
-    SPARK_HOME_SUBFOLDER="spark-$SPARK_VERSION"
-    SPARK_VERSION_FLAG="-v $SPARK_VERSION"
+    ((++FAILURE_CODE))
 fi
+SPARK_HOME_SUBFOLDER="spark-$SPARK_VERSION"
+SPARK_VERSION_FLAG="-v $SPARK_VERSION"
+
 
 if [ "$EXIT_CODE" -ne "0" ]; then
     echo -e "Master not present. Starting master with ${MASTER_JOB_ID} node(s)."
@@ -72,29 +73,25 @@ if [ "$EXIT_CODE" -ne "0" ]; then
         ((++FAILURE_CODE))
     fi
 
-    if [ "$RUNTIME" != "default" ]; then
-        RUNTIME_FLAG="-l hadoop_exclusive=1,h_rt=$RUNTIME"
+    if [ -n "$RUNTIME" ]; then
+        RUNTIME_FLAG="-t $RUNTIME"
     fi
 
-    SUBMISSION=`qsub -jc sparkflex.$SPARK_VERSION_MASTER_FLAG $RUNTIME_FLAG`
     N_NODES=${MASTER_JOB_ID}
-    MASTER_JOB_ID=`echo $SUBMISSION | sed -r -e 's/Your job ([0-9]+) .*/\\1/'`
-    while [ -z "`qstat | grep ${MASTER_JOB_ID}`" ]; do
-        echo "waiting for the master job..."
-        sleep 1s
-    done
-    MASTER_GREP=`qstat | grep -E  "^ +${MASTER_JOB_ID} [0-9.]+ master"`
-    ${SPARK_DEPLOY_CMD} -j $MASTER_JOB_ID -w ${N_NODES} -t ${RUNTIME} ${SPARK_VERSION_FLAG}
+    SUBMISSION=`$SPARK_DEPLOY_CMD launch -n $N_NODES $SPARK_VERSION_FLAG $RUNTIME_FLAG`
+    MASTER_JOB_ID=`echo $SUBMISSION | sed -r -n -e 's/.*Master submitted. Job ID is ([0-9]+).*/\1/p'`
+    MASTER_GREP=`bjobs -Xr -noheader -J master | grep -E  "^${MASTER_JOB_ID} +"`
+    echo -e "Master and workers submitted. Master job ID is ${MASTER_JOB_ID}"
 fi
 
 
-N_NODES=`qstat | grep "W${MASTER_JOB_ID}" | wc -l`
+N_NODES=`bjobs | grep "W${MASTER_JOB_ID}" | wc -l`
 TRIES_LEFT=5
 while [ "$N_NODES" -lt "1" ] && [ "$TRIES_LEFT" -gt "0" ]; do
     echo -e "waiting for the workers... "
     ((--TRIES_LEFT))
     sleep 1s
-    N_NODES=`qstat | grep "W${MASTER_JOB_ID}" | wc -l`
+    N_NODES=`bjobs | grep "W${MASTER_JOB_ID}" | wc -l`
 done
 
 if [ "$N_NODES" -lt "1" ]; then
@@ -106,13 +103,12 @@ else
 fi
 
 
-while [ -n "$(echo $MASTER_GREP | grep qw)" ] ; do
-    echo "Master node not ready yet (qw) - try again in five seconds..."
+while [ -z "$(echo $MASTER_GREP | grep RUN)" ] ; do
+    echo "Master node not ready yet - try again in five seconds..."
     sleep 5s
-    MASTER_GREP=`qstat | grep -E  "^ +${MASTER_JOB_ID} [0-9.]+ master"`
-    # MASTER_GREP=`qstat | grep -E  "${MASTER_JOB_ID} [0-9.]+ master"`
+    MASTER_GREP=`bjobs -Xr -noheader -J master | grep -E  "^${MASTER_JOB_ID} +"`
 done
-HOST=`echo $MASTER_GREP | sed -r -e 's/.* hadoop[A-Za-z0-9.]+@([A-Za-z0-9.]+) .*/\\1/'`
+HOST=`echo $MASTER_GREP | sed -r -n -e 's/.*\*([a-zA-Z0-9]+).*/\1/p'`
 
 # --tmpdir uses $TMPDIR if set else /tmp
 TMP_FILE=`mktemp --tmpdir`
@@ -164,24 +160,22 @@ echo \$TIME_CMD --verbose \
           $ARGV >> $TMP_FILE
 
 if [ -n "${TERMINATE}" ]; then
-    echo "${SPARK_DEPLOY_CMD} -s -j ${MASTER_JOB_ID} -f"  >> $TMP_FILE
+    echo "${SPARK_DEPLOY_CMD} stopcluster -j ${MASTER_JOB_ID} -f"  >> $TMP_FILE
 fi
 
-
-
-echo -e "RUNTIME          $RUNTIME"
-if [ "$RUNTIME" != "default" ]; then
-    RUNTIME_FLAG="-l h_rt=$RUNTIME"
+if [ -n "$RUNTIME" ]; then
+    RUNTIME_FLAG="-W $RUNTIME"
 fi
 
 echo -e "N_DRIVER_THREADS $N_DRIVER_THREADS"
 if [ "$N_DRIVER_THREADS" -ne "1" ]; then
-    BATCH_FLAG="-pe batch $N_DRIVER_THREADS"
+    SLOTS_FLAG="-n $N_DRIVER_THREADS"
 fi
 
-JOB_MESSAGE=`qsub $BATCH_FLAG -N "$CLASS" $RUNTIME_FLAG -j y -o ~/.sparklogs/ $TMP_FILE`
-JOB_ID=`echo ${JOB_MESSAGE} | sed -r 's/Your job ([0-9]+) .*/\1/'`
+JOB_MESSAGE=`bsub $SLOTS_FLAG $RUNTIME_FLAG -J "$CLASS" -o ~/.sparklogs/$CLASS.o%J < $TMP_FILE`
+JOB_ID=`echo ${JOB_MESSAGE} | sed -r 's/Job <([0-9]+)>.*/\1/'`
 echo -e "JOB_ID           $JOB_ID"
+echo -e "LOG_FILE         ~/.sparklogs/$CLASS.o$JOB_ID"
 
 echo
 echo -e $JOB_MESSAGE
