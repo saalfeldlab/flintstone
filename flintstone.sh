@@ -1,9 +1,7 @@
 #!/bin/bash
 
-# TODO: Use public version of spark-janelia-lsf. Changes in the modified version are:
-#  1. Runtime argument made a string of form "hh:mm" instead of integer representing minutes
-#  2. Turned off git updates check for now because it might hang silently waiting for the user prompt
-SPARK_DEPLOY_CMD="/groups/saalfeld/home/pisarevi/workspace/spark-janelia/spark-janelia-lsf-modified"
+CONTAINING_DIRECTORY="$( dirname "${BASH_SOURCE[0]}" )"
+SPARK_DEPLOY_CMD=${SPARK_DEPLOY_CMD:-${CONTAINING_DIRECTORY}/spark-janelia/spark-janelia-lsf}
 
 USAGE="usage:
 [TERMINATE=1] [RUNTIME=<hh:mm>] [TMPDIR=<tmp>] [N_EXECUTORS_PER_NODE=3] [MEMORY_PER_NODE=75] [N_DRIVER_THREADS=16] $0 <MASTER_JOB_ID|N_NODES> <JAR> <CLASS> <ARGV>
@@ -74,7 +72,7 @@ if [ "$EXIT_CODE" -ne "0" ]; then
     fi
 
     if [ -n "$RUNTIME" ]; then
-        RUNTIME_FLAG="-t $RUNTIME"
+        RUNTIME_FLAG="-t $(echo $RUNTIME | awk -F: '{ print ($1 * 60) + ($2) }')"
     fi
 
     N_NODES=${MASTER_JOB_ID}
