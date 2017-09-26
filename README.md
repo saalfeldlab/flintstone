@@ -9,7 +9,7 @@ Starting from version 1.9, `git-clone` you can specify a parameter `-j <n>` to f
 
 If your git version is older than `1.6.5`, or you already cloned the repository, run this after cloning:
 ```bash
-git clone --recursive https://github.com/saalfeldlab/flintstone
+git submodule update --init --recursive
 ```
 
 Starting your Spark jobs on the Janelia cluster is really simple. Simply run
