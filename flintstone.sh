@@ -173,7 +173,7 @@ if [ "$N_DRIVER_THREADS" -ne "1" ]; then
     SLOTS_FLAG="-n $N_DRIVER_THREADS"
 fi
 
-JOB_MESSAGE=`bsub -q spark $SLOTS_FLAG $RUNTIME_FLAG -J "$CLASS" -o ~/.sparklogs/$CLASS.o%J $TMP_FILE`
+JOB_MESSAGE=`bsub -q spark-drivers $SLOTS_FLAG $RUNTIME_FLAG -J "$CLASS" -o ~/.sparklogs/$CLASS.o%J $TMP_FILE`
 JOB_ID=`echo ${JOB_MESSAGE} | sed -r 's/Job <([0-9]+)>.*/\1/'`
 echo -e "JOB_ID           $JOB_ID"
 echo -e "LOG_FILE         ~/.sparklogs/$CLASS.o$JOB_ID"
