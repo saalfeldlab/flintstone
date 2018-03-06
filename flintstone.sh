@@ -109,7 +109,10 @@ done
 HOST=`echo $MASTER_GREP | sed -r -n -e 's/.*\*([a-zA-Z0-9]+).*/\1/p'`
 
 # --tmpdir uses $TMPDIR if set else /tmp
-TMP_FILE=`mktemp --tmpdir`
+TMP_DIR=${TMPDIR:-$HOME/tmp}
+echo $TMP_DIR
+mkdir -p $TMP_DIR
+TMP_FILE=`mktemp --tmpdir=${TMP_DIR}`
 # need this first line in tmp file
 # http://llama.mshri.on.ca/faq-llama.html#tty
 # or run qsub -S /bin/bash 
@@ -170,7 +173,7 @@ if [ "$N_DRIVER_THREADS" -ne "1" ]; then
     SLOTS_FLAG="-n $N_DRIVER_THREADS"
 fi
 
-JOB_MESSAGE=`bsub -q spark $SLOTS_FLAG $RUNTIME_FLAG -J "$CLASS" -o ~/.sparklogs/$CLASS.o%J < $TMP_FILE`
+JOB_MESSAGE=`bsub -q spark-drivers $SLOTS_FLAG $RUNTIME_FLAG -J "$CLASS" -o ~/.sparklogs/$CLASS.o%J $TMP_FILE`
 JOB_ID=`echo ${JOB_MESSAGE} | sed -r 's/Job <([0-9]+)>.*/\1/'`
 echo -e "JOB_ID           $JOB_ID"
 echo -e "LOG_FILE         ~/.sparklogs/$CLASS.o$JOB_ID"
