@@ -12,11 +12,16 @@ nodes (N_NODES), and a new Spark master will be started with N_NODES workers usi
 ${SPARK_DEPLOY_CMD} -w \${N_NODES}
 
 If master exists but no workers are present, this script will just exit with a non-zero return 
-value."
+value.
+
+TERMINATE=1 will kill the spark cluster after execution. Any value different from 1 (one) will
+keep the spark cluster running. If TERMINATE is not defined it defaults to 1.
+"
 
 FAILURE_CODE=1
 RUNTIME="${RUNTIME:-}"
-SPARK_VERSION="${SPARK_VERSION:-current}"
+SPARK_VERSION="${SPARK_VERSION:-2}"
+TERMINATE="${TERMINATE:-1}"
 
 N_CORES_PER_NODE="${N_CORES_PER_NODE:-15}"
 N_EXECUTORS_PER_NODE="${N_EXECUTORS_PER_NODE:-3}"
@@ -160,7 +165,7 @@ echo \$TIME_CMD --verbose \
           $JAR \
           $ARGV >> $TMP_FILE
 
-if [ -n "${TERMINATE}" ]; then
+if [ "${TERMINATE}" == "1" ]; then
     echo "${SPARK_DEPLOY_CMD} stopcluster -j ${MASTER_JOB_ID} -f"  >> $TMP_FILE
 fi
 
