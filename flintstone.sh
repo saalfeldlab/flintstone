@@ -20,7 +20,7 @@ keep the spark cluster running. If TERMINATE is not defined it defaults to 1.
 
 FAILURE_CODE=1
 RUNTIME="${RUNTIME:-}"
-SPARK_VERSION="${SPARK_VERSION:-current}"
+SPARK_VERSION="${SPARK_VERSION:-2}"
 TERMINATE="${TERMINATE:-1}"
 
 N_CORES_PER_NODE="${N_CORES_PER_NODE:-15}"
