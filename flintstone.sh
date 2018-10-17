@@ -20,7 +20,7 @@ keep the spark cluster running. If TERMINATE is not defined it defaults to 1.
 
 FAILURE_CODE=1
 RUNTIME="${RUNTIME:-}"
-SPARK_VERSION="${SPARK_VERSION:-2}"
+SPARK_VERSION="${SPARK_VERSION:-2.3.1}"
 TERMINATE="${TERMINATE:-1}"
 
 N_CORES_PER_NODE="${N_CORES_PER_NODE:-15}"
@@ -47,9 +47,19 @@ ARGV="$@"
 MASTER_GREP=`bjobs -Xr -noheader -J master | grep -E  "^${MASTER_JOB_ID} +"`
 EXIT_CODE=$?
 
+# for backwards compatibility with older startup scripts
+if [ "$SPARK_VERSION" == "current" ]; then
+    SPARK_VERSION="1.6.2"
+elif [ "$SPARK_VERSION" == "2" ]; then
+    SPARK_VERSION="2.1.0"
+elif [ "$SPARK_VERSION" == "test" ]; then
+    SPARK_VERSION="2.2.0"
+elif [ "$SPARK_VERSION" == "rc" ]; then
+    SPARK_VERSION="2.3.1"
+fi
 
-if [ "$SPARK_VERSION" != "current" ] && [ "$SPARK_VERSION" != "2" ] && [ "$SPARK_VERSION" != "rc" ] && [ "$SPARK_VERSION" != "test" ]; then
-    echo -e "Incorrect spark version specified. Possible values are: current, 2, rc, test"
+if [ "$SPARK_VERSION" != "1.6.2" ] && [ "$SPARK_VERSION" != "2.1.0" ] && [ "$SPARK_VERSION" != "2.2.0" ] && [ "$SPARK_VERSION" != "2.3.1" ]; then
+    echo -e "Incorrect spark version specified. Possible values are: 1.6.2 (current), 2.1.0 (2), 2.2.0 (test), 2.3.1 (rc)"
     exit $FAILURE_CODE
 else
     ((++FAILURE_CODE))
