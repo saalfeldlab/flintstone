@@ -64,6 +64,12 @@ if [ "$SPARK_VERSION" != "1.6.2" ] && [ "$SPARK_VERSION" != "2.1.0" ] && [ "$SPA
 else
     ((++FAILURE_CODE))
 fi
+
+# test
+if [ "$SPARK_VERSION" == "2.3.1" ]; then
+    SPARK_VERSION="bw"
+fi
+
 SPARK_HOME_SUBFOLDER="spark-$SPARK_VERSION"
 SPARK_VERSION_FLAG="-v $SPARK_VERSION"
 
