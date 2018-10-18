@@ -20,12 +20,12 @@ keep the spark cluster running. If TERMINATE is not defined it defaults to 1.
 
 FAILURE_CODE=1
 RUNTIME="${RUNTIME:-}"
-SPARK_VERSION="${SPARK_VERSION:-2}"
+SPARK_VERSION="${SPARK_VERSION:-2.3.1}"
 TERMINATE="${TERMINATE:-1}"
 
-N_CORES_PER_NODE="${N_CORES_PER_NODE:-15}"
-N_EXECUTORS_PER_NODE="${N_EXECUTORS_PER_NODE:-3}"
-MEMORY_PER_NODE="${MEMORY_PER_NODE:-75}"
+N_CORES_PER_NODE="${N_CORES_PER_NODE:-30}"
+N_EXECUTORS_PER_NODE="${N_EXECUTORS_PER_NODE:-6}"
+MEMORY_PER_NODE="${MEMORY_PER_NODE:-300}"
 SPARK_OPTIONS="${SPARK_OPTIONS:-}"
 
 N_DRIVER_THREADS="${N_DRIVER_THREADS:-16}"
@@ -47,13 +47,22 @@ ARGV="$@"
 MASTER_GREP=`bjobs -Xr -noheader -J master | grep -E  "^${MASTER_JOB_ID} +"`
 EXIT_CODE=$?
 
+# for backwards compatibility with older startup scripts
+if [ "$SPARK_VERSION" == "current" ]; then
+    SPARK_VERSION="1.6.2"
+elif [ "$SPARK_VERSION" == "2" ] || [ "$SPARK_VERSION" == "rc" ]; then
+    SPARK_VERSION="2.1.0"
+elif [ "$SPARK_VERSION" == "test" ]; then
+    SPARK_VERSION="2.2.0"
+fi
 
-if [ "$SPARK_VERSION" != "current" ] && [ "$SPARK_VERSION" != "2" ] && [ "$SPARK_VERSION" != "rc" ] && [ "$SPARK_VERSION" != "test" ]; then
-    echo -e "Incorrect spark version specified. Possible values are: current, 2, rc, test"
+if [ "$SPARK_VERSION" != "1.6.2" ] && [ "$SPARK_VERSION" != "2.1.0" ] && [ "$SPARK_VERSION" != "2.2.0" ] && [ "$SPARK_VERSION" != "2.3.1" ]; then
+    echo -e "Incorrect spark version specified. Possible values are: 1.6.2 (current), 2.1.0 (2, rc), 2.2.0 (test), 2.3.1 (default)"
     exit $FAILURE_CODE
 else
     ((++FAILURE_CODE))
 fi
+
 SPARK_HOME_SUBFOLDER="spark-$SPARK_VERSION"
 SPARK_VERSION_FLAG="-v $SPARK_VERSION"
 
@@ -83,7 +92,7 @@ if [ "$EXIT_CODE" -ne "0" ]; then
     N_NODES=${MASTER_JOB_ID}
     SUBMISSION=`$SPARK_DEPLOY_CMD launch -n $N_NODES $SPARK_VERSION_FLAG $RUNTIME_FLAG`
     MASTER_JOB_ID=`echo $SUBMISSION | sed -r -n -e 's/.*Master submitted. Job ID is ([0-9]+).*/\1/p'`
-    MASTER_GREP=`bjobs -Xr -noheader -J master | grep -E  "^${MASTER_JOB_ID} +"`
+    MASTER_GREP=`bjobs -Xr -noheader -J master -o "JOBID EXEC_HOST STAT" | grep -E  "^${MASTER_JOB_ID} +"`
     echo -e "Master and workers submitted. Master job ID is ${MASTER_JOB_ID}"
 fi
 
@@ -109,9 +118,10 @@ fi
 while [ -z "$(echo $MASTER_GREP | grep RUN)" ] ; do
     echo "Master node not ready yet - try again in five seconds..."
     sleep 5s
-    MASTER_GREP=`bjobs -Xr -noheader -J master | grep -E  "^${MASTER_JOB_ID} +"`
+    MASTER_GREP=`bjobs -Xr -noheader -J master -o "JOBID EXEC_HOST STAT" | grep -E  "^${MASTER_JOB_ID} +"`
 done
-HOST=`echo $MASTER_GREP | sed -r -n -e 's/.*\*([a-zA-Z0-9]+).*/\1/p'`
+
+HOST=`echo $MASTER_GREP | sed -r -n -e 's/[0-9]+ [0-9]*\*?([a-zA-Z0-9]+) .*/\1/p'`
 
 # --tmpdir uses $TMPDIR if set else /tmp
 TMP_DIR=${TMPDIR:-$HOME/tmp}
@@ -127,7 +137,7 @@ echo >> $TMP_FILE
 
 export N_CORES_PER_EXECUTOR=$(($N_CORES_PER_NODE / $N_EXECUTORS_PER_NODE))
 export MEMORY_PER_EXECUTOR=$(($MEMORY_PER_NODE / $N_EXECUTORS_PER_NODE))
-export SPARK_HOME="${SPARK_HOME:-/usr/local/$SPARK_HOME_SUBFOLDER}"
+export SPARK_HOME="${SPARK_HOME:-/misc/local/$SPARK_HOME_SUBFOLDER}"
 export PATH="$SPARK_HOME:$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH"
 export N_EXECUTORS=$(($N_NODES * $N_EXECUTORS_PER_NODE))
 export PARALLELISM="$(($N_EXECUTORS * $N_CORES_PER_EXECUTOR * 3))"
@@ -185,6 +195,3 @@ echo -e "LOG_FILE         ~/.sparklogs/$CLASS.o$JOB_ID"
 
 echo
 echo -e $JOB_MESSAGE
-
-
-
