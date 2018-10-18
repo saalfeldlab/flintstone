@@ -92,7 +92,7 @@ if [ "$EXIT_CODE" -ne "0" ]; then
     N_NODES=${MASTER_JOB_ID}
     SUBMISSION=`$SPARK_DEPLOY_CMD launch -n $N_NODES $SPARK_VERSION_FLAG $RUNTIME_FLAG`
     MASTER_JOB_ID=`echo $SUBMISSION | sed -r -n -e 's/.*Master submitted. Job ID is ([0-9]+).*/\1/p'`
-    MASTER_GREP=`bjobs -Xr -noheader -J master | grep -E  "^${MASTER_JOB_ID} +"`
+    MASTER_GREP=`bjobs -Xr -noheader -J master -o "JOBID EXEC_HOST" | grep -E  "^${MASTER_JOB_ID} +"`
     echo -e "Master and workers submitted. Master job ID is ${MASTER_JOB_ID}"
 fi
 
@@ -118,10 +118,10 @@ fi
 while [ -z "$(echo $MASTER_GREP | grep RUN)" ] ; do
     echo "Master node not ready yet - try again in five seconds..."
     sleep 5s
-    MASTER_GREP=`bjobs -Xr -noheader -J master | grep -E  "^${MASTER_JOB_ID} +"`
+    MASTER_GREP=`bjobs -Xr -noheader -J master -o "JOBID EXEC_HOST" | grep -E  "^${MASTER_JOB_ID} +"`
 done
 
-HOST=`echo $MASTER_GREP | sed -r -n -e 's/.*(vm[0-9]+).*/\1/p'`
+HOST=`echo $MASTER_GREP | sed -r -n -e 's/[0-9]+ [0-9]*\*?([a-zA-Z0-9]+)/\1/p'`
 
 # --tmpdir uses $TMPDIR if set else /tmp
 TMP_DIR=${TMPDIR:-$HOME/tmp}
