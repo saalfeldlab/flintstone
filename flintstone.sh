@@ -50,16 +50,14 @@ EXIT_CODE=$?
 # for backwards compatibility with older startup scripts
 if [ "$SPARK_VERSION" == "current" ]; then
     SPARK_VERSION="1.6.2"
-elif [ "$SPARK_VERSION" == "2" ]; then
+elif [ "$SPARK_VERSION" == "2" ] || [ "$SPARK_VERSION" == "rc" ]; then
     SPARK_VERSION="2.1.0"
 elif [ "$SPARK_VERSION" == "test" ]; then
     SPARK_VERSION="2.2.0"
-elif [ "$SPARK_VERSION" == "rc" ]; then
-    SPARK_VERSION="2.3.1"
 fi
 
 if [ "$SPARK_VERSION" != "1.6.2" ] && [ "$SPARK_VERSION" != "2.1.0" ] && [ "$SPARK_VERSION" != "2.2.0" ] && [ "$SPARK_VERSION" != "2.3.1" ]; then
-    echo -e "Incorrect spark version specified. Possible values are: 1.6.2 (current), 2.1.0 (2), 2.2.0 (test), 2.3.1 (rc)"
+    echo -e "Incorrect spark version specified. Possible values are: 1.6.2 (current), 2.1.0 (2, rc), 2.2.0 (test), 2.3.1 (default)"
     exit $FAILURE_CODE
 else
     ((++FAILURE_CODE))
