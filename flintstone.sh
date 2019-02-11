@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CONTAINING_DIRECTORY="$( dirname "${BASH_SOURCE[0]}" )"
-SPARK_DEPLOY_CMD=${SPARK_DEPLOY_CMD:-"${CONTAINING_DIRECTORY}/spark-janelia/spark-janelia-lsf --no_check --driveronspark --silentlaunch"}
+SPARK_DEPLOY_CMD=${SPARK_DEPLOY_CMD:-"${CONTAINING_DIRECTORY}/spark-janelia/spark-janelia --no_check --driveronspark --silentlaunch"}
 
 USAGE="usage:
 [TERMINATE=1] [RUNTIME=<hh:mm>] [TMPDIR=<tmp>] [N_EXECUTORS_PER_NODE=3] [MEMORY_PER_NODE=75] [N_DRIVER_THREADS=16] $0 <MASTER_JOB_ID|N_NODES> <JAR> <CLASS> <ARGV>
