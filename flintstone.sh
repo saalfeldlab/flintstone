@@ -4,7 +4,7 @@ CONTAINING_DIRECTORY="$( dirname "${BASH_SOURCE[0]}" )"
 SPARK_DEPLOY_CMD=${SPARK_DEPLOY_CMD:-"${CONTAINING_DIRECTORY}/spark-janelia/spark-janelia --no_check --driveronspark --silentlaunch"}
 
 USAGE="usage:
-[TERMINATE=1] [RUNTIME=<hh:mm>] [TMPDIR=<tmp>] [N_EXECUTORS_PER_NODE=3] [MEMORY_PER_NODE=75] [N_DRIVER_THREADS=16] $0 <MASTER_JOB_ID|N_NODES> <JAR> <CLASS> <ARGV>
+[TERMINATE=1] [RUNTIME=<hh:mm>] [TMPDIR=<tmp>] [N_EXECUTORS_PER_NODE=6] [N_CORES_PER_EXECUTOR=5] [MEMORY_PER_NODE=300] [N_DRIVER_THREADS=16] $0 <MASTER_JOB_ID|N_NODES> <JAR> <CLASS> <ARGV>
 
 If job with \${MASTER_JOB_ID} does not exist, value will be interpreted as number of 
 nodes (N_NODES), and a new Spark master will be started with N_NODES workers using
@@ -23,8 +23,8 @@ RUNTIME="${RUNTIME:-}"
 SPARK_VERSION="${SPARK_VERSION:-2.3.1}"
 TERMINATE="${TERMINATE:-1}"
 
-N_CORES_PER_NODE="${N_CORES_PER_NODE:-30}"
 N_EXECUTORS_PER_NODE="${N_EXECUTORS_PER_NODE:-6}"
+N_CORES_PER_EXECUTOR="${N_CORES_PER_EXECUTOR:-5}"
 MEMORY_PER_NODE="${MEMORY_PER_NODE:-300}"
 SPARK_OPTIONS="${SPARK_OPTIONS:-}"
 
@@ -135,7 +135,6 @@ echo "#$ -S /bin/bash" >> $TMP_FILE
 chmod +x $TMP_FILE
 echo >> $TMP_FILE
 
-export N_CORES_PER_EXECUTOR=$(($N_CORES_PER_NODE / $N_EXECUTORS_PER_NODE))
 export MEMORY_PER_EXECUTOR=$(($MEMORY_PER_NODE / $N_EXECUTORS_PER_NODE))
 export SPARK_HOME="${SPARK_HOME:-/misc/local/$SPARK_HOME_SUBFOLDER}"
 export PATH="$SPARK_HOME:$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH"
@@ -168,6 +167,7 @@ mkdir -p ~/.sparklogs
 echo TIME_CMD="\"time \$SPARK_HOME/bin/spark-submit\"" >> $TMP_FILE
 echo \$TIME_CMD --verbose \
           --conf spark.default.parallelism=$PARALLELISM \
+          --conf spark.executor.instances=$N_EXECUTORS_PER_NODE \
           --conf spark.executor.cores=$N_CORES_PER_EXECUTOR \
           --conf spark.executor.memory=${MEMORY_PER_EXECUTOR}g \
           "${SPARK_OPTIONS}" \
