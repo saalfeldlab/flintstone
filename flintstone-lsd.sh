@@ -43,7 +43,10 @@ SUBMIT_ARGS="${SUBMIT_ARGS} ${ARGV}"
 
 LOG_FILE="${HOME}/.sparklogs/${CLASS}.o%J"
 
+[[ ! -z $LSF_PROJECT ]] && PROJECT="--lsf_project=\"$LSF_PROJECT\"" || unset PROJECT
+
 "${SPARK_JANELIA}" \
+    $PROJECT \
     --nnodes="${N_NODES}" \
     --no_check \
     --driveronspark \
